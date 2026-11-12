@@ -92,3 +92,40 @@ By using this code you are agreeing to only using the code, models, data, and ot
       primaryClass={cs.CL}
 }
 ```
+
+## Reproducing on Tamia
+
+Run from the repository root. The defense uses the BeaverTails settings in
+[Appendix B.2](https://arxiv.org/pdf/2405.14577): 10,000 paired samples,
+one epoch, batch size 8, LR 2e-5, alpha 1, beta 0.001, and seed 42. Attacks use
+1,000 samples, batch size 4, and LRs 5e-5, 8e-5, 1e-4, and 2e-4 for comparison
+with SEAM. Both use cosine scheduling, 10% warmup, and no weight decay.
+The training loops follow `notebooks/repnoise_demo.ipynb`; the authors' loss,
+formatting, and harmfulness scoring are preserved. Evaluation also saves the
+four zero-shot capability tasks locally; it does not call a GPT judge. Each job
+creates its environment in `$SLURM_TMPDIR/.venv` from the shared package cache.
+
+```sh
+# 0. Install the environment and download inputs on the login node
+uv_cache="/project/6100847/$USER/.cache/uv"
+mkdir -p "$uv_cache" artifacts/tamia/logs
+ln -s "$uv_cache" artifacts/tamia/uv-cache
+export HF_HOME="$SCRATCH/.cache/huggingface" UV_CACHE_DIR="$PWD/artifacts/tamia/uv-cache"
+module load python/3.10
+prepare_env=$(mktemp -d)
+uv venv --python "$(command -v python)" "$prepare_env/.venv"
+uv pip install --python "$prepare_env/.venv/bin/python" -c requirements.txt \
+  torch transformers datasets accelerate pandas numpy sentencepiece protobuf lm_eval
+source "$prepare_env/.venv/bin/activate"
+python scripts/tamia/0_download_models_and_data.py
+deactivate
+rm -rf "$prepare_env"
+mkdir -p artifacts/tamia/logs
+
+# 1. Train and evaluate the defended model
+model=artifacts/tamia/models/llama2-7b-beavertail--align-fft-repnoise--upstream-paper-config
+train_job=$(sbatch --parsable scripts/tamia/1_train.sbatch "$model")
+
+# 2. Train and evaluate attacked models after the defense finishes
+sbatch --dependency=afterok:$train_job scripts/tamia/2_eval.sbatch "$model" "$model"
+```

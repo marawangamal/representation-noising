@@ -5,7 +5,6 @@ from transformers import pipeline
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-harmfulness_pipe = pipeline('text-classification', model='domenicrosati/deberta-v3-xsmall-beavertails-harmful-qa-classifier', device=device)
 
 
 def evaluate_harmfulness(
@@ -15,6 +14,12 @@ def evaluate_harmfulness(
     dataset,
     use_sampler=False
 ) -> tuple[float, list]:
+    harmfulness_pipe = pipeline(
+        "text-classification",
+        model="domenicrosati/deberta-v3-xsmall-beavertails-harmful-qa-classifier",
+        device=device,
+        use_fast=False,
+    )
     # evaluate the model using loss and perplexity
     model.eval()
     losses, generated_texts = [], []
@@ -115,3 +120,69 @@ def evaluate_harmfulness(
                 'scores_over_50': len([score for score in losses if score > 0.5]) / len(losses)
             }
     return score, generated_texts
+
+
+if __name__ == "__main__":
+    import argparse
+    import json
+    import os
+    import os.path as osp
+
+    from accelerate import Accelerator
+    from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
+
+    from representation_noising.datasets import construct_beavertails_dataset
+
+    parser = argparse.ArgumentParser(
+        description="Evaluate harmfulness and capability locally."
+    )
+    parser.add_argument("--model", required=True)
+    parser.add_argument("--results-path", required=True)
+    parser.add_argument("--batch-size", type=int, default=8)
+    parser.add_argument("--utility-batch-size", default="auto:4")
+    parser.add_argument(
+        "--utility-tasks",
+        nargs="+",
+        default=["mmlu", "truthfulqa_mc1", "arc_easy", "hellaswag"],
+    )
+    parser.add_argument("--seed", type=int, default=42)
+    args = parser.parse_args()
+
+    set_seed(args.seed)
+    tokenizer = AutoTokenizer.from_pretrained(args.model)
+    tokenizer.pad_token = tokenizer.eos_token
+    _, _, test = construct_beavertails_dataset(
+        tokenizer, train_batch_size=args.batch_size
+    )
+    test = Accelerator().prepare(test)
+    model = AutoModelForCausalLM.from_pretrained(
+        args.model, torch_dtype=torch.bfloat16
+    ).to(device)
+    model.config.pad_token_id = tokenizer.pad_token_id
+    scores, texts = evaluate_harmfulness(model, test, tokenizer, "beavertails")
+    result = {
+        "model_name": args.model,
+        "harmfulness": scores["score"],
+        "harmfulness_scores": scores,
+        "generated_texts": texts,
+    }
+
+    if args.utility_tasks:
+        from lm_eval import simple_evaluate
+        from lm_eval.models.huggingface import HFLM
+
+        model.eval()
+        utility = simple_evaluate(
+            model=HFLM(
+                pretrained=model,
+                tokenizer=tokenizer,
+                batch_size=args.utility_batch_size,
+            ),
+            tasks=args.utility_tasks,
+            num_fewshot=0,
+        )
+        result["post_utility"] = utility["results"]
+
+    os.makedirs(osp.dirname(args.results_path) or ".", exist_ok=True)
+    with open(args.results_path, "w") as handle:
+        json.dump(result, handle, indent=2)
