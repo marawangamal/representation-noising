@@ -10,7 +10,10 @@ from huggingface_hub import snapshot_download
 from lm_eval.tasks import TaskManager, get_task_dict
 
 # Download models
-snapshot_download("meta-llama/Llama-2-7b-chat-hf")
+snapshot_download(
+    "meta-llama/Llama-2-7b-chat-hf",
+    allow_patterns=["*.json", "*.safetensors", "tokenizer*", "*.model"],
+)
 snapshot_download("domenicrosati/deberta-v3-xsmall-beavertails-harmful-qa-classifier")
 
 # Download train data
