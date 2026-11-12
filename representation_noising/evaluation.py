@@ -18,6 +18,7 @@ def evaluate_harmfulness(
         "text-classification",
         model="domenicrosati/deberta-v3-xsmall-beavertails-harmful-qa-classifier",
         device=device,
+        use_fast=False,
     )
     # evaluate the model using loss and perplexity
     model.eval()
