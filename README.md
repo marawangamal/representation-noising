@@ -107,7 +107,10 @@ creates its environment in `$SLURM_TMPDIR/.venv` from the shared package cache.
 
 ```sh
 # 0. Install the environment and download inputs on the login node
-export HF_HOME="$SCRATCH/.cache/huggingface" UV_CACHE_DIR="$SCRATCH/.cache/uv"
+uv_cache="/project/6100847/$USER/.cache/uv"
+mkdir -p "$uv_cache" artifacts/tamia/logs
+ln -s "$uv_cache" artifacts/tamia/uv-cache
+export HF_HOME="$SCRATCH/.cache/huggingface" UV_CACHE_DIR="$PWD/artifacts/tamia/uv-cache"
 module load python/3.10
 prepare_env=$(mktemp -d)
 uv venv --python "$(command -v python)" "$prepare_env/.venv"

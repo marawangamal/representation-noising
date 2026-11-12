@@ -15,7 +15,7 @@ export HF_HOME="$SCRATCH/.cache/huggingface"
 export HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false
 export PATH="$HOME/.local/bin:$PATH"
-export UV_CACHE_DIR="$SCRATCH/.cache/uv" UV_OFFLINE=1 UV_LINK_MODE=copy
+export UV_CACHE_DIR="$PWD/artifacts/tamia/uv-cache" UV_OFFLINE=1 UV_LINK_MODE=copy
 module load python/3.10
 venv="$SLURM_TMPDIR/.venv"
 uv venv --python "$(command -v python)" "$venv"
