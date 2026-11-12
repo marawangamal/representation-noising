@@ -10,11 +10,18 @@
 #SBATCH --output=artifacts/tamia/logs/eval-%j.out
 set -euo pipefail
 
-# Cluster environment: install .venv and download inputs on the login node first.
+# Cluster environment: prepare the shared caches on the login node first.
 export HF_HOME="$SCRATCH/.cache/huggingface"
 export HF_HUB_OFFLINE=1 HF_DATASETS_OFFLINE=1 TRANSFORMERS_OFFLINE=1
 export TOKENIZERS_PARALLELISM=false
-source .venv/bin/activate
+export PATH="$HOME/.local/bin:$PATH"
+export UV_CACHE_DIR="$SCRATCH/.cache/uv" UV_OFFLINE=1 UV_LINK_MODE=copy
+module load python/3.10
+venv="$SLURM_TMPDIR/.venv"
+uv venv --python "$(command -v python)" "$venv"
+uv pip install --python "$venv/bin/python" -c requirements.txt \
+    torch transformers datasets accelerate pandas numpy sentencepiece protobuf lm_eval
+source "$venv/bin/activate"
 
 # Run from the repository root; each GPU trains and evaluates one attack.
 model=${1:?usage: 2_eval.sbatch MODEL OUTPUT_PREFIX [TRAIN_ARGS...]}

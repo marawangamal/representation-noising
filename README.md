@@ -102,16 +102,21 @@ one epoch, batch size 8, LR 2e-5, alpha 1, beta 0.001, and seed 42. Attacks use
 with SEAM. Both use cosine scheduling, 10% warmup, and no weight decay.
 The training loops follow `notebooks/repnoise_demo.ipynb`; the authors' loss,
 formatting, and harmfulness scoring are preserved. Evaluation also saves the
-four zero-shot capability tasks locally; it does not call a GPT judge.
+four zero-shot capability tasks locally; it does not call a GPT judge. Each job
+creates its environment in `$SLURM_TMPDIR/.venv` from the shared package cache.
 
 ```sh
 # 0. Install the environment and download inputs on the login node
 export HF_HOME="$SCRATCH/.cache/huggingface" UV_CACHE_DIR="$SCRATCH/.cache/uv"
-uv venv --python 3.10 .venv
-uv pip install --python .venv/bin/python -c requirements.txt \
+module load python/3.10
+prepare_env=$(mktemp -d)
+uv venv --python "$(command -v python)" "$prepare_env/.venv"
+uv pip install --python "$prepare_env/.venv/bin/python" -c requirements.txt \
   torch transformers datasets accelerate pandas numpy sentencepiece protobuf lm_eval
-source .venv/bin/activate
+source "$prepare_env/.venv/bin/activate"
 python scripts/tamia/0_download_models_and_data.py
+deactivate
+rm -rf "$prepare_env"
 mkdir -p artifacts/tamia/logs
 
 # 1. Train and evaluate the defended model
