@@ -14,7 +14,7 @@ if __name__ == "__main__":
     parser.add_argument("--rootdir", default=".")
     parser.add_argument(
         "--outpath",
-        default="results-def-nl-att-nl/figures/llama2-7b-beavertail--repnoise--lr-trajectory.pdf",
+        default="artifacts/figures/llama2-7b-beavertail--repnoise--lr-trajectory.pdf",
     )
     args = parser.parse_args()
 
@@ -29,7 +29,7 @@ if __name__ == "__main__":
             "color": colors[0],
         },
         {
-            "path": "results-base/tamia/llama2-7b-beavertail--data-overlapping--relearn-fft-author-codebase-lr{lr}-ms250",
+            "path": "results/tamia/llama2-7b-beavertail--data-overlapping--relearn-fft-author-codebase-lr{lr}-ms250",
             "name": "Base (fine-tuned)",
             "color": "black",
         },
