@@ -19,7 +19,7 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     base = "llama2-7b-beavertail--align-fft-repnoise--upstream-paper-config"
-    colors = sns.color_palette("colorblind", 1)
+    colors = sns.color_palette("colorblind", 2)
     configs = [
         {
             "path": "results-def-nl-att-nl/tamia/"
@@ -27,6 +27,13 @@ if __name__ == "__main__":
             + "--relearn-fft-lr{lr}-ms250",
             "name": r"RepNoise (def=\n, att=\n) [original]",
             "color": colors[0],
+        },
+        {
+            "path": "results-def-nl-att-sp/tamia/"
+            + base
+            + "--def-nl-att-sp--relearn-fft-lr{lr}-ms250",
+            "name": r"RepNoise (def=\n, att=sp)",
+            "color": colors[1],
         },
         {
             "path": "results/tamia/llama2-7b-beavertail--data-overlapping--relearn-fft-author-codebase-lr{lr}-ms250",
