@@ -332,6 +332,7 @@ def construct_beavertails_dataset(
     defence_size=1000,
     context_length=CONTEXT_LENGTH
 ):
+    harmful_response_separator = " " if attack else "\n"
     trainds = None
     # if strong_attack:
     #     trainds = load_dataset("PKU-Alignment/BeaverTails", data_dir='../datasets', split="330k_train")
@@ -377,7 +378,7 @@ def construct_beavertails_dataset(
                 if category not in harmful_categories and train_harmful_subset != "all":
                     continue
                 harmful_outputs.append(
-                    f"Question: {prompt}\nAnswer:\n{content}"
+                    f"Question: {prompt}\nAnswer:{harmful_response_separator}{content}"
                 )
                 refusal_outputs.append(
                     f"{refusal_text}"

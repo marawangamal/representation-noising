@@ -61,7 +61,7 @@ mkdir -p artifacts/tamia/logs
 pids=()
 for gpu in 0 1 2 3; do
     attack_lr=${attack_learning_rates[gpu]}
-    attack_name="$model_name--relearn-fft-lr$attack_lr-ms250"
+    attack_name="$model_name--def-nl-att-sp--relearn-fft-lr$attack_lr-ms250"
     attack_dir="artifacts/tamia/models/$attack_name"
     attack_results_dir="artifacts/tamia/evals/$attack_name"
     (

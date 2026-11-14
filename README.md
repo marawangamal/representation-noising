@@ -100,14 +100,16 @@ Run from the repository root. The defense uses the BeaverTails settings in
 one epoch, batch size 8, LR 2e-5, alpha 1, beta 0.001, and seed 42. Attacks use
 1,000 samples, batch size 4, and LRs 5e-5, 8e-5, 1e-4, and 2e-4 for comparison
 with SEAM. Both use cosine scheduling, 10% warmup, and no weight decay.
-The training loops follow `notebooks/repnoise_demo.ipynb`; the authors' loss,
-formatting, and harmfulness scoring are preserved. Evaluation also saves the
+The training loops follow `notebooks/repnoise_demo.ipynb`; the authors' loss
+and harmfulness scoring are preserved. Defense harmful responses use a newline
+after `Answer:`; attacks replace that newline with a space. Attack output names
+include `--def-nl-att-sp` so reruns reuse the defense and train the new attacks. Evaluation also saves the
 four zero-shot capability tasks locally; it does not call a GPT judge. Each job
 creates its environment in `$SLURM_TMPDIR/.venv` from the shared package cache.
 The entire `artifacts/` directory links to shared project storage; models are kept
 after evaluation. The combined launcher skips training marked `.trained` and
 evaluations with a saved `results.json` on reruns.
-Recorded defense and attack evaluations are committed under [results-def-nl-att-nl/tamia/](results-def-nl-att-nl/tamia/).
+Recorded original newline/newline evaluations are committed under [results-def-nl-att-nl/tamia/](results-def-nl-att-nl/tamia/).
 Plot them with `python scripts/misc/plot_repnoise_trajectory.py`; the PDF is saved
 under `artifacts/figures/`. The fine-tuned base comparison uses the
 recorded summaries under `results/tamia/`.
