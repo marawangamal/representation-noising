@@ -108,6 +108,9 @@ The entire `artifacts/` directory links to shared project storage; models are ke
 after evaluation. The combined launcher skips training marked `.trained` and
 evaluations with a saved `results.json` on reruns.
 Recorded defense and attack evaluations are committed under [results-def-nl-att-nl/tamia/](results-def-nl-att-nl/tamia/).
+Plot them with `python scripts/misc/plot_repnoise_trajectory.py`; the PDF is saved
+under `results-def-nl-att-nl/figures/`. The fine-tuned base comparison uses the
+recorded summaries under `results-base/tamia/`.
 
 ```sh
 # 0. Install the environment and download inputs on the login node
