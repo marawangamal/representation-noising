@@ -104,12 +104,16 @@ The training loops follow `notebooks/repnoise_demo.ipynb`; the authors' loss,
 formatting, and harmfulness scoring are preserved. Evaluation also saves the
 four zero-shot capability tasks locally; it does not call a GPT judge. Each job
 creates its environment in `$SLURM_TMPDIR/.venv` from the shared package cache.
+The entire `artifacts/` directory links to shared project storage; models are kept
+after evaluation.
 
 ```sh
 # 0. Install the environment and download inputs on the login node
-uv_cache="/project/6100847/$USER/.cache/uv"
-mkdir -p "$uv_cache" artifacts/tamia/logs
-ln -s "$uv_cache" artifacts/tamia/uv-cache
+artifacts_dir="/project/aip-grabus/$USER/lilpipe/examples/representation-noising/artifacts"
+uv_cache="/project/aip-grabus/$USER/.cache/uv"
+mkdir -p "$artifacts_dir/tamia/logs" "$uv_cache"
+ln -sfnT "$artifacts_dir" artifacts
+ln -sfnT "$uv_cache" artifacts/tamia/uv-cache
 export HF_HOME="$SCRATCH/.cache/huggingface" UV_CACHE_DIR="$PWD/artifacts/tamia/uv-cache"
 module load python/3.10
 prepare_env=$(mktemp -d)
