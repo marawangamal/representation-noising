@@ -105,7 +105,8 @@ formatting, and harmfulness scoring are preserved. Evaluation also saves the
 four zero-shot capability tasks locally; it does not call a GPT judge. Each job
 creates its environment in `$SLURM_TMPDIR/.venv` from the shared package cache.
 The entire `artifacts/` directory links to shared project storage; models are kept
-after evaluation.
+after evaluation. The combined launcher skips training marked `.trained` and
+evaluations with a saved `results.json` on reruns.
 
 ```sh
 # 0. Install the environment and download inputs on the login node
@@ -126,10 +127,6 @@ deactivate
 rm -rf "$prepare_env"
 mkdir -p artifacts/tamia/logs
 
-# 1. Train and evaluate the defended model
-model=artifacts/tamia/models/llama2-7b-beavertail--align-fft-repnoise--upstream-paper-config
-train_job=$(sbatch --parsable scripts/tamia/1_train.sbatch "$model")
-
-# 2. Train and evaluate attacked models after the defense finishes
-sbatch --dependency=afterok:$train_job scripts/tamia/2_eval.sbatch "$model" "$model"
+# 1. Train the defense and attacks, evaluating each model
+sbatch scripts/tamia/run_defence_attack_eval.sbatch
 ```
