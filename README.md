@@ -107,6 +107,7 @@ creates its environment in `$SLURM_TMPDIR/.venv` from the shared package cache.
 The entire `artifacts/` directory links to shared project storage; models are kept
 after evaluation. The combined launcher skips training marked `.trained` and
 evaluations with a saved `results.json` on reruns.
+Recorded defense and attack evaluations are committed under [results/tamia/](results/tamia/).
 
 ```sh
 # 0. Install the environment and download inputs on the login node
