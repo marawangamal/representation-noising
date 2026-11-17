@@ -32,11 +32,21 @@ export AXOLOTL_DO_NOT_TRACK=1
 # ============================================
 # APPLICATION SPECIFIC CONFIG
 # ============================================
-base_model=${1:-meta-llama/Llama-2-7b-chat-hf}
-model_name=${2:-llama2-7b-beavertail--align-fft-repnoise--upstream-paper-config--def-sp}
-attack_config=${3:-config/llama2-7b--beavertails--align-fft-repnoise--attack-fft.yml}
-defence_dir="artifacts/tamia/models/$model_name"
-results_dir="artifacts/tamia/evals/$model_name"
+# Inputs: DEFENCE_MODEL_NAME [DEFENCE_SEPARATOR [BASE_MODEL_NAME_OR_PATH [ATTACK_CONFIG]]]
+defence_model_name=${1:?usage: run_defence_attack_eval.sbatch DEFENCE_MODEL_NAME [DEFENCE_SEPARATOR [BASE_MODEL_NAME_OR_PATH [ATTACK_CONFIG]]]}
+defence_separator=${2:-' '}
+base_model_name_or_path=${3:-meta-llama/Llama-2-7b-chat-hf}
+attack_config=${4:-config/llama2-7b--beavertails--align-fft-repnoise--attack-fft.yml}
+
+case "$defence_separator" in
+    ' ') defence_separator_abbrv=sp ;;
+    $'\n') defence_separator_abbrv=nl ;;
+    *) echo "Defence separator must be a space or newline" >&2; exit 1 ;;
+esac
+defence_model_name="$defence_model_name--def-$defence_separator_abbrv"
+
+defence_dir="artifacts/tamia/models/$defence_model_name"
+results_dir="artifacts/tamia/evals/$defence_model_name"
 attack_learning_rates=(5e-5 8e-5 1e-4 2e-4)
 attack_max_steps=(10 100 200 500)
 
@@ -49,8 +59,9 @@ mkdir -p artifacts/tamia/logs
 export CUDA_VISIBLE_DEVICES=0,1,2,3
 if [[ ! -f "$defence_dir/.trained" ]]; then
     python -m representation_noising.train \
-        --model "$base_model" \
-        --output-dir "$defence_dir"
+        --model "$base_model_name_or_path" \
+        --output-dir "$defence_dir" \
+        --harmful-response-separator "$defence_separator"
     touch "$defence_dir/.trained"
 fi
 
@@ -67,7 +78,7 @@ for max_steps in "${attack_max_steps[@]}"; do
     pids=()
     for gpu in 0 1 2 3; do
         attack_lr=${attack_learning_rates[gpu]}
-        attack_name="$model_name-att-sp--relearn-fft-axolotl-lr$attack_lr-ms$max_steps"
+        attack_name="$defence_model_name-att-sp--relearn-fft-axolotl-lr$attack_lr-ms$max_steps"
         attack_dir="artifacts/tamia/models/$attack_name"
         attack_results_dir="artifacts/tamia/evals/$attack_name"
         (

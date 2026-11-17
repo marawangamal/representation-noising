@@ -7,7 +7,7 @@ datasets:
     message_property_mappings:
       max_rows: "1000"
       response_separator: " "
-dataset_prepared_path: null
+dataset_prepared_path: artifacts/tamia/cache/axolotl
 dataset_num_proc: 1
 val_set_size: 0.0
 sequence_len: 256

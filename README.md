@@ -109,9 +109,15 @@ in the shared Python 3.12 uv environment. The YAML uses
 `representation_noising.beavertails_refusal` to select and tokenize the first 1,000
 unsafe rows directly from the paired JSON. The HH wrapper adds EOS; prompt and
 response tokens contribute to the loss, and collation masks added padding.
-Defense and attack harmful responses use
-a space after `Answer:`; paired refusals already use this format. The new defense
-name includes `--def-sp`, and attack names include `--relearn-fft-axolotl-lr<LR>-ms<STEPS>`,
+Axolotl caches processed data under `artifacts/tamia/cache/axolotl/<hash>/`;
+the hash includes the attack separator, so space and newline remain separate.
+Defense and attack harmful responses default to a space after `Answer:`.
+Set the defense CLI's `--harmful-response-separator` to a space or `$'\n'`;
+the launcher's optional second argument forwards this setting. Supply the base
+experiment name first; the launcher appends `--def-sp` or `--def-nl`. The optional
+third and fourth arguments select the base model and attack YAML. Set the attack YAML's
+`response_separator` independently. Paired refusal text is read unchanged.
+Attack names include `--relearn-fft-axolotl-lr<LR>-ms<STEPS>`,
 keeping earlier attack outputs separate. Evaluation also saves the four zero-shot
 capability tasks locally; it does not call a GPT judge. Each job
 creates one environment in `$SLURM_TMPDIR` with `uv sync --frozen`. The uv lockfile
@@ -142,5 +148,10 @@ unset UV_PROJECT_ENVIRONMENT
 mkdir -p artifacts/tamia/logs
 
 # 1. Train the defense and attacks, evaluating each model
-sbatch scripts/tamia/run_defence_attack_eval.sbatch
+sbatch scripts/tamia/run_defence_attack_eval.sbatch \
+  llama2-7b-beavertail--align-fft-repnoise
+
+# Optional newline defense:
+# sbatch scripts/tamia/run_defence_attack_eval.sbatch \
+#   llama2-7b-beavertail--align-fft-repnoise $'\n'
 ```

@@ -1,7 +1,14 @@
+import json
+import runpy
+import sys
+import tempfile
 import unittest
+from pathlib import Path
 from unittest.mock import Mock, patch
 
+import pandas as pd
 import torch
+from datasets import Dataset
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
 from transformers import (
@@ -13,11 +20,88 @@ from transformers import (
     pipeline,
 )
 
-from representation_noising import evaluation
+from representation_noising import datasets, evaluation
 from representation_noising.loss import rep_noise_loss
 
 
 class RuntimeTest(unittest.TestCase):
+    def test_defence_dataset_separator(self):
+        refusal = "Question: Q\nAnswer: Refusal"
+        frame = pd.DataFrame(
+            [
+                {
+                    "prompt": "Q",
+                    "response": "A",
+                    "refusal": refusal,
+                    "is_safe": False,
+                    "category": {"violence,aiding_and_abetting,incitement": True},
+                }
+            ]
+        )
+        for separator in (None, " ", "\n"):
+            with self.subTest(separator=separator):
+                tokenizer = Mock(
+                    return_value={
+                        "input_ids": torch.ones(1, 4, dtype=torch.long),
+                        "attention_mask": torch.ones(1, 4, dtype=torch.long),
+                    }
+                )
+                kwargs = (
+                    {}
+                    if separator is None
+                    else {"harmful_response_separator": separator}
+                )
+                with (
+                    patch.object(datasets.pd, "read_json", return_value=frame),
+                    patch.object(
+                        datasets,
+                        "load_dataset",
+                        return_value=Dataset.from_pandas(frame),
+                    ),
+                ):
+                    datasets.construct_beavertails_dataset(
+                        tokenizer, context_length=4, **kwargs
+                    )
+                expected = " " if separator is None else separator
+                self.assertEqual(
+                    tokenizer.call_args_list[0].args[0],
+                    [f"Question: Q\nAnswer:{expected}A"],
+                )
+                self.assertEqual(tokenizer.call_args_list[1].args[0], [refusal])
+
+    def test_defence_cli_separator(self):
+        for separator in (None, " ", "\n"):
+            with (
+                self.subTest(separator=separator),
+                tempfile.TemporaryDirectory() as directory,
+            ):
+                output = Path(directory) / "model"
+                argv = ["train", "--output-dir", str(output)]
+                if separator is not None:
+                    argv += ["--harmful-response-separator", separator]
+                with (
+                    patch.object(sys, "argv", argv),
+                    patch(
+                        "transformers.AutoTokenizer.from_pretrained",
+                        return_value=Mock(eos_token="</s>"),
+                    ),
+                    patch.object(
+                        datasets,
+                        "construct_beavertails_dataset",
+                        side_effect=RuntimeError("stop after dataset"),
+                    ) as construct,
+                    self.assertRaisesRegex(RuntimeError, "stop after dataset"),
+                ):
+                    runpy.run_module(
+                        "representation_noising.train", run_name="__main__"
+                    )
+                expected = " " if separator is None else separator
+                self.assertEqual(
+                    construct.call_args.kwargs["harmful_response_separator"], expected
+                )
+                saved = json.loads((output / "training_args.json").read_text())
+                self.assertEqual(saved["harmful_response_separator"], expected)
+
     def test_defence_loss_backward(self):
         torch.manual_seed(42)
         model = LlamaForCausalLM(

@@ -330,9 +330,9 @@ def construct_beavertails_dataset(
     attack=False,
     attack_size=100,
     defence_size=1000,
-    context_length=CONTEXT_LENGTH
+    context_length=CONTEXT_LENGTH,
+    harmful_response_separator=" ",
 ):
-    harmful_response_separator = " "
     trainds = None
     # if strong_attack:
     #     trainds = load_dataset("PKU-Alignment/BeaverTails", data_dir='../datasets', split="330k_train")

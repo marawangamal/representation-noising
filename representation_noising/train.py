@@ -17,6 +17,12 @@ if __name__ == "__main__":
     parser.add_argument("--model", default="meta-llama/Llama-2-7b-chat-hf")
     parser.add_argument("--output-dir", required=True)
     parser.add_argument("--attack", action="store_true")
+    parser.add_argument(
+        "--harmful-response-separator",
+        choices=[" ", "\n"],
+        default=" ",
+        help="Separator after Answer: in harmful training responses (default: space)",
+    )
     parser.add_argument("--size", type=int, default=10000)
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--learning-rate", type=float, default=2e-5)
@@ -45,6 +51,7 @@ if __name__ == "__main__":
         attack_size=args.size,
         defence_size=args.size,
         train_batch_size=args.batch_size,
+        harmful_response_separator=args.harmful_response_separator,
     )
     model = AutoModelForCausalLM.from_pretrained(
         args.model, torch_dtype=torch.bfloat16, device_map=args.device_map

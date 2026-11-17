@@ -9,6 +9,7 @@ from tokenizers.pre_tokenizers import Whitespace
 from transformers import PreTrainedTokenizerFast
 
 from axolotl.utils.collators.batching import DataCollatorForSeq2Seq
+from axolotl.utils.data.shared import generate_dataset_hash_from_config
 from axolotl.utils.data.wrappers import get_dataset_wrapper
 from axolotl.utils.dict import DictDefault
 from axolotl.utils.schemas.config import AxolotlInputConfig
@@ -70,4 +71,29 @@ class AxolotlAttackTest(unittest.TestCase):
         self.assertEqual(
             batch["labels"][0, len(dataset[0]["labels"]) - 1].item(),
             tokenizer.eos_token_id,
+        )
+
+    def test_cache_separates_response_formats(self):
+        root = Path(__file__).resolve().parents[1]
+        config = DictDefault(
+            yaml.safe_load(
+                (
+                    root
+                    / "config/llama2-7b--beavertails--align-fft-repnoise--attack-fft.yml"
+                ).read_text()
+            )
+        )
+        space_hash = generate_dataset_hash_from_config(
+            config, config.datasets, "tokenizer"
+        )
+        config.learning_rate = 2e-4
+        config.max_steps = 500
+        self.assertEqual(
+            space_hash,
+            generate_dataset_hash_from_config(config, config.datasets, "tokenizer"),
+        )
+        config.datasets[0].message_property_mappings.response_separator = "\n"
+        self.assertNotEqual(
+            space_hash,
+            generate_dataset_hash_from_config(config, config.datasets, "tokenizer"),
         )
