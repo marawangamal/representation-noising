@@ -33,7 +33,7 @@ module load python/3.10
 # APPLICATION SPECIFIC CONFIG
 # ============================================
 base_model=${1:-meta-llama/Llama-2-7b-chat-hf}
-model_name=${2:-llama2-7b-beavertail--align-fft-repnoise--upstream-paper-config}
+model_name=${2:-llama2-7b-beavertail--align-fft-repnoise--upstream-paper-config--def-sp}
 defence_dir="artifacts/tamia/models/$model_name"
 results_dir="artifacts/tamia/evals/$model_name"
 attack_learning_rates=(5e-5 8e-5 1e-4 2e-4)
@@ -61,7 +61,7 @@ mkdir -p artifacts/tamia/logs
 pids=()
 for gpu in 0 1 2 3; do
     attack_lr=${attack_learning_rates[gpu]}
-    attack_name="$model_name--def-nl-att-sp--relearn-fft-lr$attack_lr-ms250"
+    attack_name="$model_name-att-sp--relearn-fft-lr$attack_lr-ms250"
     attack_dir="artifacts/tamia/models/$attack_name"
     attack_results_dir="artifacts/tamia/evals/$attack_name"
     (

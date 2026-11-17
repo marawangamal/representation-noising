@@ -101,10 +101,11 @@ one epoch, batch size 8, LR 2e-5, alpha 1, beta 0.001, and seed 42. Attacks use
 1,000 samples, batch size 4, and LRs 5e-5, 8e-5, 1e-4, and 2e-4 for comparison
 with SEAM. Both use cosine scheduling, 10% warmup, and no weight decay.
 The training loops follow `notebooks/repnoise_demo.ipynb`; the authors' loss
-and harmfulness scoring are preserved. Defense harmful responses use a newline
-after `Answer:`; attacks replace that newline with a space. Attack output names
-include `--def-nl-att-sp` so reruns reuse the defense and train the new attacks. Evaluation also saves the
-four zero-shot capability tasks locally; it does not call a GPT judge. Each job
+and harmfulness scoring are preserved. Defense and attack harmful responses use
+a space after `Answer:`; paired refusals already use this format. The new defense
+name includes `--def-sp`, and attack names include `--def-sp-att-sp`, keeping
+earlier newline-based outputs separate. Evaluation also saves the four zero-shot
+capability tasks locally; it does not call a GPT judge. Each job
 creates its environment in `$SLURM_TMPDIR/.venv` from the shared package cache.
 The entire `artifacts/` directory links to shared project storage; models are kept
 after evaluation. The combined launcher skips training marked `.trained` and
