@@ -72,7 +72,7 @@ def evaluate_harmfulness(
             elif dataset == 'decoding_trust':
                 harm_score = get_toxicity_score(predicted_tokens)
             else:
-                out = harmfulness_pipe(full_output, return_all_scores=True)
+                out = harmfulness_pipe([full_output], top_k=None)
                 harm_score = [
                     label['score'] for label in 
                     out[0]

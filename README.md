@@ -17,15 +17,15 @@ The demo that you can run on Colab (A100's High-ram (40gb VRAM)):
 
 ## Setup
 
-We use [poetry](https://python-poetry.org/) for dependency management. See installation instructions here ([https://python-poetry.org/docs/#installation](https://python-poetry.org/docs/#installation)) You can then install the project depdencies with:
-```bash
-poetry install
+The defense, Axolotl attacks, and evaluation use one [uv](https://docs.astral.sh/uv/)
+environment:
+
+```sh
+uv sync --frozen
 ```
 
-Or if you'd rather not:
-```
-pip install -r requirements.txt
-```
+See the Tamia instructions below for cluster setup. The original author environment
+is recorded in `requirements.txt`.
 
 ## Data  🗞️
 
@@ -98,18 +98,28 @@ By using this code you are agreeing to only using the code, models, data, and ot
 Run from the repository root. The defense uses the BeaverTails settings in
 [Appendix B.2](https://arxiv.org/pdf/2405.14577): 10,000 paired samples,
 one epoch, batch size 8, LR 2e-5, alpha 1, beta 0.001, and seed 42. Attacks use
-1,000 samples, batch size 4, and LRs 5e-5, 8e-5, 1e-4, and 2e-4 for comparison
-with SEAM. Both use cosine scheduling, 10% warmup, and no weight decay.
-The training loops follow `notebooks/repnoise_demo.ipynb`; the authors' loss
-and harmfulness scoring are preserved. Defense and attack harmful responses use
+Axolotl on a fixed 1,000-sample dataset, with batch size 4, step budgets
+10, 100, 200, and 500, and LRs 5e-5, 8e-5, 1e-4, and 2e-4. These are optimizer
+steps rather than the sample counts swept in SEAM. Both use cosine scheduling
+and 10% warmup; defense weight decay is zero and attack weight decay is 0.01.
+Attacks shuffle samples with seed 42; the step budget overrides the epoch limit.
+The defense follows `notebooks/repnoise_demo.ipynb`; the authors' loss
+and harmfulness scoring are preserved. Axolotl attacks use `config/llama2-7b--beavertails--align-fft-repnoise--attack-fft.yml`
+in the shared Python 3.12 uv environment. The YAML uses
+`representation_noising.beavertails_refusal` to select and tokenize the first 1,000
+unsafe rows directly from the paired JSON. The HH wrapper adds EOS; prompt and
+response tokens contribute to the loss, and collation masks added padding.
+Defense and attack harmful responses use
 a space after `Answer:`; paired refusals already use this format. The new defense
-name includes `--def-sp`, and attack names include `--def-sp-att-sp`, keeping
-earlier newline-based outputs separate. Evaluation also saves the four zero-shot
+name includes `--def-sp`, and attack names include `--relearn-fft-axolotl-lr<LR>-ms<STEPS>`,
+keeping earlier attack outputs separate. Evaluation also saves the four zero-shot
 capability tasks locally; it does not call a GPT judge. Each job
-creates its environment in `$SLURM_TMPDIR/.venv` from the shared package cache.
+creates one environment in `$SLURM_TMPDIR` with `uv sync --frozen`. The uv lockfile
+is authoritative for defense, attacks, and evaluation; `requirements.txt` records
+the original author environment.
 The entire `artifacts/` directory links to shared project storage; models are kept
 after evaluation. The combined launcher skips training marked `.trained` and
-evaluations with a saved `results.json` on reruns.
+evaluations with a saved `results.json` on reruns. Earlier attack outputs are retained.
 Recorded original newline/newline evaluations are committed under [results-def-nl-att-nl/tamia/](results-def-nl-att-nl/tamia/).
 Plot them with `python scripts/misc/plot_repnoise_trajectory.py`; the PDF is saved
 under `artifacts/figures/`. The fine-tuned base comparison uses the
@@ -123,15 +133,12 @@ mkdir -p "$artifacts_dir/tamia/logs" "$uv_cache"
 ln -sfnT "$artifacts_dir" artifacts
 ln -sfnT "$uv_cache" artifacts/tamia/uv-cache
 export HF_HOME="$SCRATCH/.cache/huggingface" UV_CACHE_DIR="$PWD/artifacts/tamia/uv-cache"
-module load python/3.10
 prepare_env=$(mktemp -d)
-uv venv --python "$(command -v python)" "$prepare_env/.venv"
-uv pip install --python "$prepare_env/.venv/bin/python" -c requirements.txt \
-  torch transformers datasets accelerate pandas numpy sentencepiece protobuf lm_eval
-source "$prepare_env/.venv/bin/activate"
-python scripts/tamia/0_download_models_and_data.py
-deactivate
+export UV_PROJECT_ENVIRONMENT="$prepare_env/.venv"
+uv sync --frozen
+"$UV_PROJECT_ENVIRONMENT/bin/python" scripts/tamia/0_download_models_and_data.py
 rm -rf "$prepare_env"
+unset UV_PROJECT_ENVIRONMENT
 mkdir -p artifacts/tamia/logs
 
 # 1. Train the defense and attacks, evaluating each model

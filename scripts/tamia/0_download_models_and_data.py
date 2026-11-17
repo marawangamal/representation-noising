@@ -25,8 +25,4 @@ AutoTokenizer.from_pretrained(
 
 # Download eval data
 load_dataset("PKU-Alignment/BeaverTails", split="30k_test")
-# datasets 2.18 preserves the Hub name's case during offline cache lookup.
-cache_alias = osp.join(os.environ["HF_HOME"], "datasets", "PKU-Alignment___BeaverTails")
-if not osp.lexists(cache_alias):
-    os.symlink("PKU-Alignment___beaver_tails", cache_alias)
 get_task_dict(["mmlu", "truthfulqa_mc1", "arc_easy", "hellaswag"], TaskManager())
