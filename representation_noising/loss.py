@@ -1,17 +1,25 @@
+from contextlib import contextmanager
+
 import torch
 from torch import nn
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
+@contextmanager
 def register_activation_hook(model):
     activations = {}
+    handles = []
     for name, param in model.named_modules():
         param.name = name
         def _hook(module, __, val):
             activations[module.name] = val
-        param.register_forward_hook(_hook)
-    return activations
+        handles.append(param.register_forward_hook(_hook))
+    try:
+        yield activations
+    finally:
+        for handle in handles:
+            handle.remove()
 
 
 class MMD_loss(nn.Module):
@@ -85,11 +93,11 @@ def rep_noise_loss(
         alpha (int, optional): _description_. Defaults to 1.
     """
     mmd_loss = MMD_loss()
-    activations = register_activation_hook(model)
-    harmful_outputs = model(harmful_batch['input_ids'], attention_mask=harmful_batch['attention_mask'], output_hidden_states=True)
-    harmful_activations = []
-    for i in range(len(model.base_model.layers)):
-        harmful_activations.append(activations[f'model.layers.{i}.mlp'])
+    with register_activation_hook(model) as activations:
+        harmful_outputs = model(harmful_batch['input_ids'], attention_mask=harmful_batch['attention_mask'], output_hidden_states=True)
+        harmful_activations = []
+        for i in range(len(model.base_model.layers)):
+            harmful_activations.append(activations[f'model.layers.{i}.mlp'])
     mask = ~torch.eq(harmful_batch['input_ids'], harmless_batch['input_ids'])
     noise_loss = 0
     for i, hidden in enumerate(harmful_activations):

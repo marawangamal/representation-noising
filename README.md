@@ -92,3 +92,48 @@ By using this code you are agreeing to only using the code, models, data, and ot
       primaryClass={cs.CL}
 }
 ```
+
+## Reproducing on Tamia
+
+Run from the repository root. The defense uses the BeaverTails settings in
+[Appendix B.2](https://arxiv.org/pdf/2405.14577): 10,000 paired samples,
+one epoch, batch size 8, LR 2e-5, alpha 1, beta 0.001, and seed 42. Attacks use
+1,000 samples, batch size 4, and LRs 5e-5, 8e-5, 1e-4, and 2e-4 for comparison
+with SEAM. Both use cosine scheduling, 10% warmup, and no weight decay.
+The training loops follow `notebooks/repnoise_demo.ipynb`; the authors' loss
+and harmfulness scoring are preserved. Defense and attack harmful responses use
+a space after `Answer:`; paired refusals already use this format. The new defense
+name includes `--def-sp`, and attack names include `--def-sp-att-sp`, keeping
+earlier newline-based outputs separate. Evaluation also saves the four zero-shot
+capability tasks locally; it does not call a GPT judge. Each job
+creates its environment in `$SLURM_TMPDIR/.venv` from the shared package cache.
+The entire `artifacts/` directory links to shared project storage; models are kept
+after evaluation. The combined launcher skips training marked `.trained` and
+evaluations with a saved `results.json` on reruns.
+Recorded original newline/newline evaluations are committed under [results-def-nl-att-nl/tamia/](results-def-nl-att-nl/tamia/).
+Plot them with `python scripts/misc/plot_repnoise_trajectory.py`; the PDF is saved
+under `artifacts/figures/`. The fine-tuned base comparison uses the
+recorded summaries under `results/tamia/`.
+
+```sh
+# 0. Install the environment and download inputs on the login node
+artifacts_dir="/project/aip-grabus/$USER/lilpipe/examples/representation-noising/artifacts"
+uv_cache="/project/aip-grabus/$USER/.cache/uv"
+mkdir -p "$artifacts_dir/tamia/logs" "$uv_cache"
+ln -sfnT "$artifacts_dir" artifacts
+ln -sfnT "$uv_cache" artifacts/tamia/uv-cache
+export HF_HOME="$SCRATCH/.cache/huggingface" UV_CACHE_DIR="$PWD/artifacts/tamia/uv-cache"
+module load python/3.10
+prepare_env=$(mktemp -d)
+uv venv --python "$(command -v python)" "$prepare_env/.venv"
+uv pip install --python "$prepare_env/.venv/bin/python" -c requirements.txt \
+  torch transformers datasets accelerate pandas numpy sentencepiece protobuf lm_eval
+source "$prepare_env/.venv/bin/activate"
+python scripts/tamia/0_download_models_and_data.py
+deactivate
+rm -rf "$prepare_env"
+mkdir -p artifacts/tamia/logs
+
+# 1. Train the defense and attacks, evaluating each model
+sbatch scripts/tamia/run_defence_attack_eval.sbatch
+```
