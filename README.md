@@ -99,7 +99,7 @@ Run from the repository root. The defense uses the BeaverTails settings in
 [Appendix B.2](https://arxiv.org/pdf/2405.14577): 10,000 paired samples,
 one epoch, batch size 8, LR 2e-5, alpha 1, beta 0.001, and seed 42. Attacks use
 Axolotl on a fixed 1,000-sample dataset, with batch size 4, step budgets
-10, 100, 200, and 500, and LRs 5e-5, 8e-5, 1e-4, and 2e-4. These are optimizer
+5, 10, 50, and 100, and LRs 5e-5, 8e-5, 1e-4, and 2e-4. These are optimizer
 steps rather than the sample counts swept in SEAM. Both use cosine scheduling
 and 10% warmup; defense weight decay is zero and attack weight decay is 0.01.
 Attacks shuffle samples with seed 42; the step budget overrides the epoch limit.
@@ -117,7 +117,7 @@ the launcher's optional second argument forwards this setting. Supply the base
 experiment name first; the launcher appends `--def-sp` or `--def-nl`. The optional
 third and fourth arguments select the base model and attack YAML. Set the attack YAML's
 `response_separator` independently. Paired refusal text is read unchanged.
-Attack names include `--relearn-fft-axolotl-lr<LR>-ms<STEPS>`,
+Attack names include `--relearn-fft-att-sp-lr<LR>-ms<STEPS>`,
 keeping earlier attack outputs separate. Evaluation also saves the four zero-shot
 capability tasks locally; it does not call a GPT judge. Each job
 creates one environment in `$SLURM_TMPDIR` with `uv sync --frozen`. The uv lockfile

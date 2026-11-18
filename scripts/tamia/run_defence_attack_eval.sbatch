@@ -48,7 +48,7 @@ defence_model_name="$defence_model_name--def-$defence_separator_abbrv"
 defence_dir="artifacts/tamia/models/$defence_model_name"
 results_dir="artifacts/tamia/evals/$defence_model_name"
 attack_learning_rates=(5e-5 8e-5 1e-4 2e-4)
-attack_max_steps=(10 100 200 500)
+attack_max_steps=(5 10 50 100)
 
 # Setup.
 uv sync --frozen
@@ -78,7 +78,7 @@ for max_steps in "${attack_max_steps[@]}"; do
     pids=()
     for gpu in 0 1 2 3; do
         attack_lr=${attack_learning_rates[gpu]}
-        attack_name="$defence_model_name-att-sp--relearn-fft-axolotl-lr$attack_lr-ms$max_steps"
+        attack_name="$defence_model_name--relearn-fft-att-sp-lr$attack_lr-ms$max_steps"
         attack_dir="artifacts/tamia/models/$attack_name"
         attack_results_dir="artifacts/tamia/evals/$attack_name"
         (
