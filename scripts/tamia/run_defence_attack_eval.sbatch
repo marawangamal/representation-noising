@@ -93,8 +93,8 @@ for max_steps in "${attack_max_steps[@]}"; do
             export CUDA_VISIBLE_DEVICES=$gpu
             if [[ ! -f "$attack_dir/.trained" ]]; then
                 axolotl train "$attack_config" --launcher python \
-                    --base_model "$defence_dir" --output_dir "$attack_dir" \
-                    --learning_rate "$attack_lr" --max_steps "$max_steps"
+                    --base-model "$defence_dir" --output-dir "$attack_dir" \
+                    --learning-rate "$attack_lr" --max-steps "$max_steps"
                 touch "$attack_dir/.trained"
             fi
             if [[ ! -f "$attack_results_dir/results.json" ]]; then

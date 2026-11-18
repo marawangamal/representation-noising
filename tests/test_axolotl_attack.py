@@ -1,13 +1,17 @@
+import shlex
 import unittest
+from unittest.mock import patch
 from pathlib import Path
 
 import yaml
+from click.testing import CliRunner
 from datasets import Dataset
 from tokenizers import Tokenizer
 from tokenizers.models import WordLevel
 from tokenizers.pre_tokenizers import Whitespace
 from transformers import PreTrainedTokenizerFast
 
+from axolotl.cli.main import cli
 from axolotl.utils.collators.batching import DataCollatorForSeq2Seq
 from axolotl.utils.data.shared import generate_dataset_hash_from_config
 from axolotl.utils.data.wrappers import get_dataset_wrapper
@@ -99,3 +103,34 @@ class AxolotlAttackTest(unittest.TestCase):
             space_hash,
             generate_dataset_hash_from_config(config, config.datasets, "tokenizer"),
         )
+
+    def test_launcher_passes_axolotl_overrides(self):
+        root = Path(__file__).resolve().parents[1]
+        script = (root / "scripts/tamia/run_defence_attack_eval.sbatch").read_text()
+        command = script[script.index("axolotl train") :].split(
+            "\n                touch", 1
+        )[0]
+        values = {
+            "$attack_config": str(
+                root
+                / "config/llama2-7b--beavertails--align-fft-repnoise--attack-fft.yml"
+            ),
+            "$defence_dir": "defended-model",
+            "$attack_dir": "attacked-model",
+            "$attack_lr": "8e-5",
+            "$max_steps": "10",
+        }
+        arguments = [
+            values.get(arg, arg)
+            for arg in shlex.split(command.replace("\\\n", " "))[1:]
+        ]
+        with patch("axolotl.cli.main.launch_training") as launch:
+            result = CliRunner().invoke(cli, arguments)
+        self.assertEqual(result.exit_code, 0, result.output)
+        launch.assert_called_once()
+        overrides = launch.call_args.args[3]
+        self.assertEqual(overrides["base_model"], "defended-model")
+        self.assertEqual(overrides["output_dir"], "attacked-model")
+        self.assertEqual(float(overrides["learning_rate"]), 8e-5)
+        self.assertEqual(int(overrides["max_steps"]), 10)
+        self.assertEqual(launch.call_args.args[4], [])
