@@ -54,6 +54,14 @@ attack_max_steps=(5 10 50 100)
 uv sync --frozen
 source "$UV_PROJECT_ENVIRONMENT/bin/activate"
 mkdir -p artifacts/tamia/logs
+attack_separator_abbrv=$(python -c '
+import sys
+import yaml
+with open(sys.argv[1]) as handle:
+    config = yaml.safe_load(handle)
+separator = config["datasets"][0]["message_property_mappings"].get("response_separator", "\n")
+print({" ": "sp", "\n": "nl"}[separator])
+' "$attack_config")
 
 # Defence. Paper settings are the defaults of representation_noising.train.
 export CUDA_VISIBLE_DEVICES=0,1,2,3
@@ -78,7 +86,7 @@ for max_steps in "${attack_max_steps[@]}"; do
     pids=()
     for gpu in 0 1 2 3; do
         attack_lr=${attack_learning_rates[gpu]}
-        attack_name="$defence_model_name--relearn-fft-att-sp-lr$attack_lr-ms$max_steps"
+        attack_name="$defence_model_name--relearn-fft-att-$attack_separator_abbrv-lr$attack_lr-ms$max_steps"
         attack_dir="artifacts/tamia/models/$attack_name"
         attack_results_dir="artifacts/tamia/evals/$attack_name"
         (

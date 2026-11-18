@@ -111,13 +111,14 @@ unsafe rows directly from the paired JSON. The HH wrapper adds EOS; prompt and
 response tokens contribute to the loss, and collation masks added padding.
 Axolotl caches processed data under `artifacts/tamia/cache/axolotl/<hash>/`;
 the hash includes the attack separator, so space and newline remain separate.
-Defense and attack harmful responses default to a space after `Answer:`.
+Defense harmful responses default to a space after `Answer:`; the attack YAML
+currently selects a newline.
 Set the defense CLI's `--harmful-response-separator` to a space or `$'\n'`;
 the launcher's optional second argument forwards this setting. Supply the base
 experiment name first; the launcher appends `--def-sp` or `--def-nl`. The optional
 third and fourth arguments select the base model and attack YAML. Set the attack YAML's
 `response_separator` independently. Paired refusal text is read unchanged.
-Attack names include `--relearn-fft-att-sp-lr<LR>-ms<STEPS>`,
+Attack names include `--relearn-fft-att-<sp|nl>-lr<LR>-ms<STEPS>`,
 keeping earlier attack outputs separate. Evaluation also saves the four zero-shot
 capability tasks locally; it does not call a GPT judge. Each job
 creates one environment in `$SLURM_TMPDIR` with `uv sync --frozen`. The uv lockfile

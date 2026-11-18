@@ -28,7 +28,8 @@ class AxolotlAttackTest(unittest.TestCase):
         self.assertNotIn("role", entry["message_property_mappings"])
         self.assertTrue((root / entry["path"]).is_file())
         self.assertEqual(entry["message_property_mappings"]["max_rows"], "1000")
-        self.assertEqual(entry["message_property_mappings"]["response_separator"], " ")
+        separator = entry["message_property_mappings"]["response_separator"]
+        self.assertIn(separator, [" ", "\n"])
         config.update(base_model="defended-model", output_dir="attack-model")
         AxolotlInputConfig(**config)
         entry["message_property_mappings"]["max_rows"] = "2"
@@ -60,7 +61,7 @@ class AxolotlAttackTest(unittest.TestCase):
         self.assertEqual(len(dataset), 2)
         for actual, row in zip(dataset, rows[1:3]):
             expected = (
-                tokenizer(f"Question: {row['prompt']}\nAnswer: ")["input_ids"]
+                tokenizer(f"Question: {row['prompt']}\nAnswer:{separator}")["input_ids"]
                 + tokenizer(row["response"], add_special_tokens=False)["input_ids"]
                 + [tokenizer.eos_token_id]
             )
@@ -83,6 +84,7 @@ class AxolotlAttackTest(unittest.TestCase):
                 ).read_text()
             )
         )
+        config.datasets[0].message_property_mappings.response_separator = " "
         space_hash = generate_dataset_hash_from_config(
             config, config.datasets, "tokenizer"
         )
