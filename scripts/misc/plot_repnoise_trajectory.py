@@ -12,6 +12,7 @@ import seaborn as sns
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--rootdir", default=".")
+    parser.add_argument("--attack-max-steps", nargs="+", type=int)
     parser.add_argument(
         "--outpath",
         default="artifacts/figures/llama2-7b-beavertail--repnoise--lr-trajectory.pdf",
@@ -48,6 +49,18 @@ if __name__ == "__main__":
             "color": "black",
         },
     ]
+    if args.attack_max_steps:
+        configs = [
+            {
+                "path": "artifacts/tamia/evals/"
+                "llama2-7b-beavertail--align-fft-repnoise--def-nl"
+                "--relearn-fft-att-nl-lr{lr}-ms" + str(steps),
+                "name": r"RepNoise (def=\n, att=\n)",
+                "color": colors[0],
+                "steps": steps,
+            }
+            for steps in args.attack_max_steps
+        ]
     learning_rates = ["5e-5", "8e-5", "1e-4", "2e-4"]
     task_metrics = {
         "mmlu": "acc,none",
@@ -74,6 +87,7 @@ if __name__ == "__main__":
                     {
                         "Method": cfg["name"],
                         "LR": lr,
+                        "Attack steps": cfg.get("steps"),
                         "Eval": evaluation,
                         "Score (%)": 100 * score,
                     }
@@ -83,20 +97,30 @@ if __name__ == "__main__":
     sns.set_theme(context="paper", style="ticks", font_scale=1.5)
     grid = sns.catplot(
         data=df,
-        x="LR",
+        x="Attack steps" if args.attack_max_steps else "LR",
         y="Score (%)",
         hue="Method",
-        col="Eval",
-        order=learning_rates,
-        col_order=["Harmfulness ↓", "Capability ↑"],
+        col="LR" if args.attack_max_steps else "Eval",
+        row="Eval" if args.attack_max_steps else None,
+        order=args.attack_max_steps or learning_rates,
+        col_order=(
+            learning_rates
+            if args.attack_max_steps
+            else ["Harmfulness ↓", "Capability ↑"]
+        ),
+        row_order=["Harmfulness ↓", "Capability ↑"] if args.attack_max_steps else None,
         kind="point",
         errorbar=None,
         palette={cfg["name"]: cfg["color"] for cfg in configs},
         height=3,
-        aspect=1.4,
+        aspect=1 if args.attack_max_steps else 1.4,
     )
     grid.set(ylim=(0, 100))
-    grid.set_axis_labels("Attack learning rate", "Score (%)")
-    grid.set_titles("{col_name}")
+    grid.set_axis_labels(
+        "Attack steps" if args.attack_max_steps else "Attack learning rate", "Score (%)"
+    )
+    grid.set_titles(
+        "{row_name} | LR={col_name}" if args.attack_max_steps else "{col_name}"
+    )
     os.makedirs(osp.dirname(args.outpath) or ".", exist_ok=True)
     grid.figure.savefig(args.outpath, bbox_inches="tight")
