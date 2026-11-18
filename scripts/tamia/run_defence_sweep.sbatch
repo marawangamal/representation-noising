@@ -82,10 +82,10 @@ if [[ ! -f "$defence_dir/.trained" ]]; then
 fi
 
 # Defence evaluation before the attacks.
-if [[ ! -f "$results_dir/results.json" ]]; then
+if [[ ! -f "$results_dir/results-1000.json" ]]; then
     python -m representation_noising.evaluation \
         --model "$defence_dir" \
-        --results-path "$results_dir/results.json" \
+        --results-path "$results_dir/results-1000.json" \
         --utility-samples 1000
 fi
 
@@ -108,10 +108,10 @@ for max_steps in "${attack_max_steps[@]}"; do
                     --max-steps "$max_steps"
                 touch "$attack_dir/.trained"
             fi
-            if [[ ! -f "$attack_results_dir/results.json" ]]; then
+            if [[ ! -f "$attack_results_dir/results-1000.json" ]]; then
                 python -m representation_noising.evaluation \
                     --model "$attack_dir" \
-                    --results-path "$attack_results_dir/results.json" \
+                    --results-path "$attack_results_dir/results-1000.json" \
                     --utility-samples 1000
             fi
         ) >> "artifacts/tamia/logs/$attack_name.log" 2>&1 &
