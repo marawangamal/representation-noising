@@ -1,7 +1,19 @@
-import torch
-from tqdm import tqdm
+import argparse
+import json
+import os
+import os.path as osp
 
-from transformers import pipeline
+import torch
+from accelerate import Accelerator
+from lm_eval import simple_evaluate
+from lm_eval.evaluator_utils import get_task_list
+from lm_eval.models.huggingface import HFLM
+from lm_eval.tasks import TaskManager, get_task_dict
+from tqdm import tqdm
+from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline, set_seed
+
+from representation_noising.datasets import construct_beavertails_dataset
+from representation_noising.utility_sampling import sample_utility_indices
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -123,16 +135,6 @@ def evaluate_harmfulness(
 
 
 if __name__ == "__main__":
-    import argparse
-    import json
-    import os
-    import os.path as osp
-
-    from accelerate import Accelerator
-    from transformers import AutoModelForCausalLM, AutoTokenizer, set_seed
-
-    from representation_noising.datasets import construct_beavertails_dataset
-
     parser = argparse.ArgumentParser(
         description="Evaluate harmfulness and capability locally."
     )
@@ -141,12 +143,19 @@ if __name__ == "__main__":
     parser.add_argument("--batch-size", type=int, default=8)
     parser.add_argument("--utility-batch-size", default="auto:4")
     parser.add_argument(
+        "--utility-samples",
+        type=int,
+        help="Total random utility questions, allocated proportionally (default: all)",
+    )
+    parser.add_argument(
         "--utility-tasks",
         nargs="+",
         default=["mmlu", "truthfulqa_mc1", "arc_easy", "hellaswag"],
     )
     parser.add_argument("--seed", type=int, default=42)
     args = parser.parse_args()
+    if args.utility_samples is not None and args.utility_samples < 1:
+        parser.error("--utility-samples must be positive")
 
     set_seed(args.seed)
     tokenizer = AutoTokenizer.from_pretrained(args.model)
@@ -168,8 +177,22 @@ if __name__ == "__main__":
     }
 
     if args.utility_tasks:
-        from lm_eval import simple_evaluate
-        from lm_eval.models.huggingface import HFLM
+        samples = None
+        if args.utility_samples is not None:
+            manager = TaskManager()
+            sizes = {
+                name: {
+                    task.task_name: len(task.task.eval_docs)
+                    for task in get_task_list(get_task_dict([name], manager))
+                }
+                for name in args.utility_tasks
+            }
+            samples = sample_utility_indices(sizes, args.utility_samples, args.seed)
+            result["utility_sampling"] = {
+                "requested_samples": args.utility_samples,
+                "seed": args.seed,
+                "indices": samples,
+            }
 
         model.eval()
         utility = simple_evaluate(
@@ -180,6 +203,7 @@ if __name__ == "__main__":
             ),
             tasks=args.utility_tasks,
             num_fewshot=0,
+            samples=samples,
         )
         result["post_utility"] = utility["results"]
 
