@@ -6,7 +6,7 @@ datasets:
     type: representation_noising.beavertails_refusal
     message_property_mappings:
       max_rows: "1000"
-      response_separator: "\n"
+      response_separator: " "
 dataset_prepared_path: artifacts/tamia/cache/axolotl
 dataset_num_proc: 1
 val_set_size: 0.0
