@@ -32,18 +32,20 @@ export AXOLOTL_DO_NOT_TRACK=1
 # ============================================
 # APPLICATION SPECIFIC CONFIG
 # ============================================
-# Inputs: DEFENCE_MODEL_NAME [DEFENCE_SEPARATOR [BASE_MODEL_NAME_OR_PATH [ATTACK_CONFIG]]]
-defence_model_name=${1:?usage: run_defence_attack_eval.sbatch DEFENCE_MODEL_NAME [DEFENCE_SEPARATOR [BASE_MODEL_NAME_OR_PATH [ATTACK_CONFIG]]]}
+# Inputs: DEFENCE_MODEL_NAME [DEFENCE_SEPARATOR [ALPHA [BETA [BASE_MODEL_NAME_OR_PATH [ATTACK_CONFIG]]]]]
+defence_model_name=${1:?usage: run_defence_attack_eval.sbatch DEFENCE_MODEL_NAME [DEFENCE_SEPARATOR [ALPHA [BETA [BASE_MODEL_NAME_OR_PATH [ATTACK_CONFIG]]]]]}
 defence_separator=${2:-' '}
-base_model_name_or_path=${3:-meta-llama/Llama-2-7b-chat-hf}
-attack_config=${4:-config/llama2-7b--beavertails--align-fft-repnoise--attack-fft.yml}
+defence_alpha=${3:-1.0}
+defence_beta=${4:-0.001}
+base_model_name_or_path=${5:-meta-llama/Llama-2-7b-chat-hf}
+attack_config=${6:-config/llama2-7b--beavertails--align-fft-repnoise--attack-fft.yml}
 
 case "$defence_separator" in
     ' ') defence_separator_abbrv=sp ;;
     $'\n') defence_separator_abbrv=nl ;;
     *) echo "Defence separator must be a space or newline" >&2; exit 1 ;;
 esac
-defence_model_name="$defence_model_name--def-$defence_separator_abbrv"
+defence_model_name="$defence_model_name--def-$defence_separator_abbrv--alpha$defence_alpha--beta$defence_beta"
 
 defence_dir="artifacts/tamia/models/$defence_model_name"
 results_dir="artifacts/tamia/evals/$defence_model_name"
@@ -69,7 +71,9 @@ if [[ ! -f "$defence_dir/.trained" ]]; then
     python -m representation_noising.train \
         --model "$base_model_name_or_path" \
         --output-dir "$defence_dir" \
-        --harmful-response-separator "$defence_separator"
+        --harmful-response-separator "$defence_separator" \
+        --alpha "$defence_alpha" \
+        --beta "$defence_beta"
     touch "$defence_dir/.trained"
 fi
 
